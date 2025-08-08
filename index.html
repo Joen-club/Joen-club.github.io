@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Knowing vs Finding Information</title>
+  <style>
+    body {
+      display: flex;
+      justify-content: space-around;
+      align-items: flex-start;
+      height: 100vh;
+      margin: 0;
+      background: #f5f5f5;
+      font-family: sans-serif;
+    }
+    .section {
+      text-align: center;
+    }
+    #brainContainer {
+      position: relative;
+      margin-top: 30px;
+    }
+    canvas {
+      background: transparent;
+    }
+    #experienceBtn {
+      position: absolute;
+      bottom: -60px;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 10px 20px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    h2 {
+      margin: 10px 0 0;
+    }
+  </style>
+</head>
+<body>
+  <!-- Brain side -->
+  <div class="section">
+    <h2>Brain Section 🧠</h2>
+    <div id="brainContainer">
+      <canvas id="brainCanvas" width="400" height="300"></canvas>
+      <button id="experienceBtn">Experience +</button>
+    </div>
+  </div>
+
+  <!-- Laptop side -->
+  <div class="section">
+    <h2>External Knowledge 💻</h2>
+    <canvas id="laptopCanvas" width="400" height="300"></canvas>
+  </div>
+
+  <script>
+    const brainCanvas = document.getElementById('brainCanvas');
+    const bctx = brainCanvas.getContext('2d');
+    const laptopCanvas = document.getElementById('laptopCanvas');
+    const lctx = laptopCanvas.getContext('2d');
+
+    const brainFacts = ['A', 'B', 'C', 'D', 'E'];
+    const laptopFacts = ['1', '2', '3', '4', '5', '6', '7'];
+
+    let brainNodes = [];
+    let laptopNodes = [];
+    let connections = [];
+    let hoveredLaptopIndex = null;
+    let mouseX = 0, mouseY = 0;
+
+    function init() {
+      brainFacts.forEach(label => brainNodes.push(createBrainNode(label)));
+      laptopFacts.forEach((label,i) => laptopNodes.push(createLaptopNode(label,i)));
+
+      laptopCanvas.addEventListener('mousemove', onMouseMove);
+      laptopCanvas.addEventListener('mouseout', () => { hoveredLaptopIndex = null; laptopCanvas.style.cursor = 'default'; });
+      laptopCanvas.addEventListener('click', onLaptopClick);
+
+      animate();
+    }
+
+    function createBrainNode(label) {
+      return {
+        label,
+        x: Math.random()*300 + 50,
+        y: Math.random()*200 + 50,
+        vx: (Math.random()-0.5)*1.2,
+        vy: (Math.random()-0.5)*1.2
+      };
+    }
+    function createLaptopNode(label,i) {
+      const cols = 4;
+      const row = Math.floor(i/cols), col = i%cols;
+      return { label, x: 70 + col*80 + Math.random()*20, y: 60 + row*60 + Math.random()*20 };
+    }
+
+    function drawBrain() {
+      bctx.clearRect(0,0,brainCanvas.width,brainCanvas.height);
+      bctx.fillStyle = '#f8ccd9'; bctx.strokeStyle = '#000'; bctx.lineWidth = 8;
+      bctx.beginPath(); bctx.ellipse(200,150,150,100,0,0,2*Math.PI); bctx.fill(); bctx.stroke();
+      bctx.strokeStyle = '#777'; bctx.lineWidth = 2;
+      connections.forEach(([i,j]) => {
+        const a=brainNodes[i], b=brainNodes[j];
+        bctx.beginPath(); bctx.moveTo(a.x,a.y); bctx.lineTo(b.x,b.y); bctx.stroke();
+      });
+      brainNodes.forEach(n=>{
+        bctx.fillStyle='#fff'; bctx.strokeStyle='#333'; bctx.lineWidth=2;
+        bctx.beginPath(); bctx.arc(n.x,n.y,15,0,2*Math.PI); bctx.fill(); bctx.stroke();
+        bctx.fillStyle='#000'; bctx.font='16px sans-serif'; bctx.textAlign='center'; bctx.textBaseline='middle';
+        bctx.fillText(n.label,n.x,n.y);
+      });
+    }
+
+    function drawLaptop() {
+      lctx.clearRect(0,0,laptopCanvas.width,laptopCanvas.height);
+      lctx.fillStyle='#888'; lctx.strokeStyle='#666'; lctx.lineWidth=8;
+      lctx.beginPath(); lctx.rect(40,30,320,220); lctx.fill(); lctx.stroke();
+      lctx.fillStyle='#ddd'; lctx.fillRect(50,40,300,160);
+      lctx.fillStyle='#bbb'; lctx.fillRect(90,200,220,40);
+      laptopNodes.forEach((n,i)=>{
+        lctx.fillStyle='#fff'; lctx.strokeStyle='#333'; lctx.lineWidth=2;
+        lctx.beginPath(); lctx.arc(n.x,n.y,12,0,2*Math.PI); lctx.fill(); lctx.stroke();
+        lctx.fillStyle='#000'; lctx.font='14px sans-serif'; lctx.textAlign='center'; lctx.textBaseline='middle';
+        lctx.fillText(n.label,n.x,n.y);
+        if(i===hoveredLaptopIndex) {
+          lctx.fillStyle='rgba(0,0,0,0.7)'; lctx.font='12px sans-serif'; lctx.textAlign='center';
+          lctx.fillText('learn fact', n.x, n.y-20);
+        }
+      });
+    }
+
+    function animate() {
+      brainNodes.forEach(n=>{ n.x+=n.vx; n.y+=n.vy; if(n.x<50||n.x>350) n.vx*=-1; if(n.y<50||n.y>250) n.vy*=-1; });
+      drawBrain(); drawLaptop();
+      requestAnimationFrame(animate);
+    }
+
+    function onMouseMove(e) {
+      const rect = laptopCanvas.getBoundingClientRect();
+      mouseX = e.clientX - rect.left; mouseY = e.clientY - rect.top;
+      hoveredLaptopIndex = null; laptopCanvas.style.cursor = 'default';
+      laptopNodes.forEach((n,i)=>{
+        if(Math.hypot(n.x-mouseX, n.y-mouseY) < 12) {
+          hoveredLaptopIndex = i;
+          laptopCanvas.style.cursor = 'pointer';
+        }
+      });
+    }
+
+    function onLaptopClick() {
+      if(hoveredLaptopIndex === null) return;
+      const n = laptopNodes.splice(hoveredLaptopIndex,1)[0];
+      brainNodes.push(createBrainNode(n.label));
+      hoveredLaptopIndex = null;
+    }
+
+    function shuffle(arr){ for(let i=arr.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [arr[i],arr[j]]=[arr[j],arr[i]]; }}
+
+    document.getElementById('experienceBtn').addEventListener('click', () => {
+      const allPairs = [];
+      const n = brainNodes.length;
+      for(let i=0; i<n; i++) for(let j=i+1; j<n; j++) allPairs.push([i,j]);
+      const existing = connections.map(c=>c[0]+'-'+c[1]);
+      const avail = allPairs.filter(p => !existing.includes(p[0]+'-'+p[1]));
+      if(avail.length === 0) return;
+      shuffle(avail);
+      connections.push(avail[0]);
+    });
+
+    init();
+  </script>
+</body>
+</html>
